@@ -1,7 +1,10 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { getRecordings } from '@/services/recordingService'
+import {
+  getRecordings,
+  uploadRecording,
+} from '@/services/recordingService'
 
 type Recording = {
   id: string
@@ -15,14 +18,57 @@ type Recording = {
 export default function RecordingsPage() {
   const [recordings, setRecordings] = useState<Recording[]>([])
   const [search, setSearch] = useState('')
-  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(
-    null
-  )
+  const [selectedRecording, setSelectedRecording] =
+    useState<Recording | null>(null)
+
+  const [isUploadOpen, setIsUploadOpen] = useState(false)
+  const [uploadTitle, setUploadTitle] = useState('')
+  const [uploadCourseId, setUploadCourseId] = useState('')
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadMessage, setUploadMessage] = useState('')
 
   async function loadRecordings() {
     const data = await getRecordings()
     setRecordings(data)
-    if (data.length > 0) setSelectedRecording(data[0])
+
+    if (data.length > 0 && !selectedRecording) {
+      setSelectedRecording(data[0])
+    }
+  }
+
+  async function handleUpload(e: React.FormEvent) {
+    e.preventDefault()
+
+    if (!uploadFile) {
+      setUploadMessage('Please select a video file.')
+      return
+    }
+
+    setUploading(true)
+    setUploadMessage('')
+
+    try {
+      await uploadRecording(uploadFile, uploadTitle, uploadCourseId)
+
+      setUploadTitle('')
+      setUploadCourseId('')
+      setUploadFile(null)
+      setUploadMessage('Recording uploaded successfully.')
+
+      await loadRecordings()
+
+      setTimeout(() => {
+        setIsUploadOpen(false)
+        setUploadMessage('')
+      }, 800)
+    } catch (error) {
+      setUploadMessage(
+        error instanceof Error ? error.message : 'Upload failed.'
+      )
+    } finally {
+      setUploading(false)
+    }
   }
 
   useEffect(() => {
@@ -104,15 +150,26 @@ export default function RecordingsPage() {
           </header>
 
           <div className="p-6 lg:p-10">
-            <section className="mb-8 overflow-hidden rounded-3xl bg-linear-to-r from-indigo-700 via-purple-700 to-fuchsia-700 p-8 text-white shadow-xl">
-              <p className="text-sm font-semibold uppercase tracking-widest text-indigo-200">
-                Smart Communication Portal
-              </p>
-              <h1 className="mt-3 text-4xl font-bold">Lecture Recordings</h1>
-              <p className="mt-3 max-w-2xl text-indigo-100">
-                Access uploaded lectures, review course content, and stream
-                recordings directly from the browser.
-              </p>
+            <section className="mb-8 flex flex-col gap-6 overflow-hidden rounded-3xl bg-linear-to-r from-indigo-700 via-purple-700 to-fuchsia-700 p-8 text-white shadow-xl lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-widest text-indigo-200">
+                  Smart Communication Portal
+                </p>
+                <h1 className="mt-3 text-4xl font-bold">
+                  Lecture Recordings
+                </h1>
+                <p className="mt-3 max-w-2xl text-indigo-100">
+                  Access uploaded lectures, review course content, and stream
+                  recordings directly from the browser.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsUploadOpen(true)}
+                className="rounded-2xl bg-white px-5 py-3 font-semibold text-indigo-700 shadow-lg transition hover:bg-indigo-50"
+              >
+                + Upload Recording
+              </button>
             </section>
 
             <section className="grid gap-8 xl:grid-cols-[1fr_420px]">
@@ -220,7 +277,9 @@ export default function RecordingsPage() {
                           </p>
                           <p className="mt-2 text-xs text-slate-400">
                             Uploaded{' '}
-                            {new Date(recording.created_at).toLocaleDateString()}
+                            {new Date(
+                              recording.created_at
+                            ).toLocaleDateString()}
                           </p>
                         </div>
                       </button>
@@ -232,6 +291,84 @@ export default function RecordingsPage() {
           </div>
         </section>
       </div>
+
+      {isUploadOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  Upload Recording
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Add a new MP4 or WebM lecture recording.
+                </p>
+              </div>
+
+              <button
+                onClick={() => setIsUploadOpen(false)}
+                className="rounded-full bg-slate-100 px-3 py-1 text-lg text-slate-600 hover:bg-slate-200"
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleUpload} className="space-y-5">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Recording Title
+                </label>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  placeholder="e.g. Introduction to Algorithms"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Course ID
+                </label>
+                <input
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
+                  placeholder="Paste course ID"
+                  value={uploadCourseId}
+                  onChange={(e) => setUploadCourseId(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                  Video File
+                </label>
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm"
+                  className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-4 py-3"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  required
+                />
+              </div>
+
+              {uploadMessage && (
+                <p className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-700">
+                  {uploadMessage}
+                </p>
+              )}
+
+              <button
+                disabled={uploading}
+                className="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white shadow-md transition hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {uploading ? 'Uploading...' : 'Upload Recording'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
