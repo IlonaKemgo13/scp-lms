@@ -15,3 +15,19 @@ export async function getGrades() {
 
   return data
 }
+
+export async function createGrade(values: {
+  student_id: string
+  course_id: string
+  type: 'assignment' | 'test' | 'project'
+  score: number
+  max_score: number
+}) {
+  const supabase = createClient()
+
+  const { error } = await supabase.from('grades').insert(values)
+
+  if (error) {
+    throw new Error(error.message)
+  }
+}
