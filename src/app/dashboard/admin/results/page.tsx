@@ -2,51 +2,38 @@
 
 import { useState } from "react";
 
-export default function ResultsPage() {
+export default function AdminResultsPage() {
+  const [results, setResults] = useState<{ id: string; semester: string; domain: string; fileName: string; uploadedAt: string }[]>([]);
   const [semester, setSemester] = useState("");
   const [domain, setDomain] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+
+  const handleUpload = () => {
+    if (!semester || !domain || !file) return alert("Please fill all fields");
+    setResults([...results, { id: Date.now().toString(), semester, domain, fileName: file.name, uploadedAt: new Date().toISOString().split("T")[0] }]);
+    setSemester(""); setDomain(""); setFile(null);
+    alert("Results uploaded successfully!");
+  };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Upload Final Results</h1>
-      
-      <div className="max-w-md">
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Semester</label>
-          <select 
-            value={semester}
-            onChange={(e) => setSemester(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          >
-            <option value="">Select Semester</option>
-            <option value="Spring 2026">Spring 2026</option>
-            <option value="Fall 2025">Fall 2025</option>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-2">Final Results Upload</h1>
+      <p className="text-gray-500 mb-6">Upload end-of-semester results as PDF files</p>
+      <div className="bg-white border rounded-lg p-6 mb-8">
+        <div className="space-y-4">
+          <select value={semester} onChange={(e) => setSemester(e.target.value)} className="w-full border rounded px-3 py-2">
+            <option value="">Select Semester</option><option>Spring 2026</option><option>Fall 2025</option><option>Summer 2025</option>
           </select>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Domain</label>
-          <select 
-            value={domain}
-            onChange={(e) => setDomain(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2"
-          >
-            <option value="">Select Domain</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Economics">Economics</option>
-            <option value="Mechanical Engineering">Mechanical Engineering</option>
+          <select value={domain} onChange={(e) => setDomain(e.target.value)} className="w-full border rounded px-3 py-2">
+            <option value="">Select Domain</option><option>Computer Science</option><option>Economics</option><option>Mechanical Engineering</option><option>Electrical Engineering</option>
           </select>
+          <input type="file" accept=".pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full border rounded px-3 py-2" />
+          <button onClick={handleUpload} className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Upload Results</button>
         </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">PDF File</label>
-          <input type="file" accept=".pdf" className="w-full border rounded-lg px-3 py-2" />
-        </div>
-
-        <button className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Upload Results
-        </button>
       </div>
+      {results.length > 0 && (
+        <div><h2 className="font-semibold mb-3">Previous Uploads</h2><div className="space-y-2">{results.map(r => <div key={r.id} className="border rounded p-3 flex justify-between"><span>{r.semester} - {r.domain}</span><span className="text-gray-500">{r.fileName}</span></div>)}</div></div>
+      )}
     </div>
   );
 }
