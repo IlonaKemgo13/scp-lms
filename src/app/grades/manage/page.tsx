@@ -1,9 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { createGrade } from '@/services/gradeService'
+import { useEffect, useState } from 'react'
+import { createGrade, getCourses, getStudents } from '@/services/gradeService'
+
+type Student = {
+  id: string
+  student_number: string | null
+  role: string
+}
+
+type Course = {
+  id: string
+  name: string
+  course_code: string | null
+}
 
 export default function ManageGradesPage() {
+  const [students, setStudents] = useState<Student[]>([])
+  const [courses, setCourses] = useState<Course[]>([])
+
   const [studentId, setStudentId] = useState('')
   const [courseId, setCourseId] = useState('')
   const [type, setType] = useState<'assignment' | 'test' | 'project'>(
@@ -13,6 +28,14 @@ export default function ManageGradesPage() {
   const [maxScore, setMaxScore] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+
+  async function loadOptions() {
+    const studentsData = await getStudents()
+    const coursesData = await getCourses()
+
+    setStudents(studentsData)
+    setCourses(coursesData)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,6 +63,10 @@ export default function ManageGradesPage() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadOptions()
+  }, [])
 
   return (
     <main className="min-h-screen bg-slate-100">
@@ -76,14 +103,6 @@ export default function ManageGradesPage() {
               </div>
             ))}
           </nav>
-
-          <div className="absolute bottom-6 left-4 right-4 rounded-2xl border border-slate-700 bg-slate-900 p-4">
-            <p className="text-lg">📝</p>
-            <p className="mt-2 text-sm font-semibold">Grade Management</p>
-            <p className="text-xs text-slate-400">
-              Enter student assessment scores.
-            </p>
-          </div>
         </aside>
 
         <section className="min-h-screen flex-1 lg:ml-64">
@@ -110,8 +129,8 @@ export default function ManageGradesPage() {
               </p>
               <h1 className="mt-3 text-4xl font-bold">Grade Management</h1>
               <p className="mt-3 max-w-2xl text-indigo-100">
-                Enter student grades for assignments, tests, and projects. Saved
-                grades will appear automatically in the grade display interface.
+                Select a student and course using their school identifiers.
+                The system stores the correct database IDs automatically.
               </p>
             </section>
 
@@ -128,35 +147,48 @@ export default function ManageGradesPage() {
                     Add Student Grade
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Fill in the student, course, assessment type, and score.
+                    Select the student and course, then enter the assessment
+                    score.
                   </p>
                 </div>
 
                 <div className="space-y-5">
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                      Student ID
+                      Student
                     </label>
-                    <input
+                    <select
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-                      placeholder="Paste student profile ID"
                       value={studentId}
                       onChange={(e) => setStudentId(e.target.value)}
                       required
-                    />
+                    >
+                      <option value="">Select student</option>
+                      {students.map((student) => (
+                        <option key={student.id} value={student.id}>
+                          {student.student_number ?? 'No student number'}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
                     <label className="mb-2 block text-sm font-semibold text-slate-700">
-                      Course ID
+                      Course
                     </label>
-                    <input
+                    <select
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100"
-                      placeholder="Paste course ID"
                       value={courseId}
                       onChange={(e) => setCourseId(e.target.value)}
                       required
-                    />
+                    >
+                      <option value="">Select course</option>
+                      {courses.map((course) => (
+                        <option key={course.id} value={course.id}>
+                          {course.course_code ?? 'No code'} - {course.name}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   <div>
@@ -227,37 +259,34 @@ export default function ManageGradesPage() {
 
               <div className="rounded-3xl border bg-white p-6 shadow-lg">
                 <h2 className="text-2xl font-bold text-slate-900">
-                  How this works
+                  Why dropdowns?
                 </h2>
 
                 <div className="mt-6 space-y-4">
                   <div className="rounded-2xl bg-indigo-50 p-4">
                     <p className="font-semibold text-indigo-800">
-                      1. Select the student
+                      Students use school IDs
                     </p>
                     <p className="mt-1 text-sm text-indigo-700">
-                      For now, paste the student profile ID. Later this will be
-                      replaced with a dropdown from enrolled students.
+                      Example: 22M013. The database still stores the hidden UUID.
                     </p>
                   </div>
-
                   <div className="rounded-2xl bg-violet-50 p-4">
                     <p className="font-semibold text-violet-800">
-                      2. Select the course
+                      Courses use course codes
                     </p>
                     <p className="mt-1 text-sm text-violet-700">
-                      For now, paste the course ID. Later this will be linked to
-                      the teacher’s assigned courses.
+                      Example: CSC101. The system still saves the real course
+                      UUID.
                     </p>
                   </div>
 
                   <div className="rounded-2xl bg-emerald-50 p-4">
                     <p className="font-semibold text-emerald-800">
-                      3. Save grade
+                      Fewer errors
                     </p>
                     <p className="mt-1 text-sm text-emerald-700">
-                      Once saved, the grade is stored in Supabase and appears on
-                      the grade display page.
+                      Teachers no longer need to type technical database IDs.
                     </p>
                   </div>
                 </div>
