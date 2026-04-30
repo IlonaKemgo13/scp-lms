@@ -1,24 +1,44 @@
-'use client'
+﻿"use client";
 
-import { useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function HomePage() {
+  const router = useRouter();
+
   useEffect(() => {
-    const testConnection = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase.auth.getSession()
-
-      console.log('Supabase session:', data)
-      console.log('Supabase error:', error)
+    // Check if user is logged in
+    const user = localStorage.getItem("user");
+    if (user) {
+      const parsedUser = JSON.parse(user);
+      // Redirect to appropriate dashboard based on role
+      switch (parsedUser.role) {
+        case "admin":
+          router.push("/dashboard/admin");
+          break;
+        case "teacher":
+          router.push("/dashboard/teacher");
+          break;
+        case "student":
+          router.push("/dashboard/student");
+          break;
+        case "parent":
+          router.push("/dashboard/parent");
+          break;
+        default:
+          router.push("/auth/login");
+      }
+    } else {
+      router.push("/auth/login");
     }
-
-    testConnection()
-  }, [])
+  }, [router]);
 
   return (
-    <main className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-bold">Supabase Connected ✅</h1>
-    </main>
-  )
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600">Redirecting to login...</p>
+      </div>
+    </div>
+  );
 }
